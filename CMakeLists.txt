@@ -84,8 +84,9 @@ add_subdirectory(src)
 
 if(ENABLE_CLANG_TIDY)
     # Older LLVM releases cannot parse the supported GCC 15/16 C++26 headers.
-    find_program(CLANG_TIDY_20_EXECUTABLE NAMES clang-tidy-20 REQUIRED)
-    set_target_properties(${PROJECT_NAME} hal hal_drivers runtime_libstdcxx PROPERTIES
-        CXX_CLANG_TIDY "${CLANG_TIDY_20_EXECUTABLE}"
+    find_program(CLANG_TIDY_EXECUTABLE NAMES clang-tidy REQUIRED)
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        CXX_CLANG_TIDY
+            "${CLANG_TIDY_EXECUTABLE};--line-filter=[{\"name\":\".*/src/.*\"}]"
     )
 endif()

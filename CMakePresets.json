@@ -43,14 +43,6 @@
             }
         },
         {
-            "name": "runtime-test-stm32",
-            "displayName": "Runtime Self-Test STM32",
-            "inherits": "debug-stm32",
-            "cacheVariables": {
-                "RUNTIME_HARDWARE_SELF_TEST": true
-            }
-        },
-        {
             "name": "debug-linux",
             "displayName": "Debug Linux",
             "inherits": "base-linux",
@@ -83,10 +75,6 @@
         {
             "name": "release-stm32",
             "configurePreset": "release-stm32"
-        },
-        {
-            "name": "runtime-test-stm32",
-            "configurePreset": "runtime-test-stm32"
         },
         {
             "name": "debug-linux",
