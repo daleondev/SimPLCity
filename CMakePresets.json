@@ -1,0 +1,105 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 22,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": true
+            }
+        },
+        {
+            "name": "base-stm32",
+            "hidden": true,
+            "inherits": "base",
+            "toolchainFile": "${sourceDir}/cmake/arm-none-eabi.cmake"
+        },
+        {
+            "name": "base-linux",
+            "hidden": true,
+            "inherits": "base"
+        },
+        {
+            "name": "debug-stm32",
+            "displayName": "Debug STM32",
+            "inherits": "base-stm32",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "release-stm32",
+            "displayName": "Release STM32",
+            "inherits": "base-stm32",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "runtime-test-stm32",
+            "displayName": "Runtime Self-Test STM32",
+            "inherits": "debug-stm32",
+            "cacheVariables": {
+                "RUNTIME_HARDWARE_SELF_TEST": true
+            }
+        },
+        {
+            "name": "debug-linux",
+            "displayName": "Debug Linux",
+            "inherits": "base-linux",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "clang-tidy-linux",
+            "displayName": "Clang-Tidy Linux",
+            "inherits": "debug-linux",
+            "cacheVariables": {
+                "ENABLE_CLANG_TIDY": true
+            }
+        },
+        {
+            "name": "release-linux",
+            "displayName": "Release Linux",
+            "inherits": "base-linux",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "debug-stm32",
+            "configurePreset": "debug-stm32"
+        },
+        {
+            "name": "release-stm32",
+            "configurePreset": "release-stm32"
+        },
+        {
+            "name": "runtime-test-stm32",
+            "configurePreset": "runtime-test-stm32"
+        },
+        {
+            "name": "debug-linux",
+            "configurePreset": "debug-linux"
+        },
+        {
+            "name": "clang-tidy-linux",
+            "configurePreset": "clang-tidy-linux",
+            "cleanFirst": true
+        },
+        {
+            "name": "release-linux",
+            "configurePreset": "release-linux"
+        }
+    ]
+}
