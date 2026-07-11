@@ -1,8 +1,6 @@
-# Nucleo-H753ZI C++ Template
+# SimPLCity
 
-A modern, CMake-based C++ application template for the **STMicroelectronics NUCLEO-H753ZI** development board, using Eclipse ThreadX and the STM32H7 Hardware Abstraction Layer (HAL).
-
-This repository provides a lean starting point for embedded C++ development with a small handwritten application layer on top of CubeMX-generated board support.
+![Banner](assets/banner.png)
 
 ## Software Dependencies
 
