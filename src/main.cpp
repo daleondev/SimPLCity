@@ -2,6 +2,8 @@
 #include "hal/drivers/factory/ethernet.hpp"
 #include "hal/hal.hpp"
 
+#include "pneumo/meta.hpp"
+
 #include <chrono>
 #include <print>
 #include <thread>
@@ -31,6 +33,12 @@ namespace
     }
 }
 
+enum class TestEnum
+{
+    Hello,
+    World
+};
+
 int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 {
     const auto user_button{ hal::board::createButton(hal::board::ButtonId::User) };
@@ -52,6 +60,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
         report_user_button_press();
         green_led->toggle();
         std::this_thread::sleep_for(CYCLE_INTERVAL);
+        std::println("{} {}",
+                     pnm::meta::enumeration::enumerator_name<TestEnum::Hello>().data(),
+                     pnm::meta::enumeration::enumerator_name<TestEnum::World>().data());
     }
 
     std::unreachable();

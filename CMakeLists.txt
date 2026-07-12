@@ -34,12 +34,17 @@ else()
     message(FATAL_ERROR "Unsupported target system: ${CMAKE_SYSTEM_NAME}")
 endif()
 
+set(BUILD_SAMPLES OFF)
+set(BUILD_TESTS OFF)
+add_subdirectory(external/pneumo)
+
 add_executable(${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         platform
         project_compiler_settings
+        pneumo::pneumo
 )
 
 target_compile_options(${PROJECT_NAME}
