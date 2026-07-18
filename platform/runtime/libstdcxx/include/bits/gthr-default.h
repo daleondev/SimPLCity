@@ -13,9 +13,8 @@
 #error "The ThreadX libstdc++ adapter requires libstdc++ 15 or 16"
 #endif
 
-#if defined(__ARM_EABI__) &&                                                                    \
-  (!defined(__GLIBCXX__) ||                                                                    \
-   (_GLIBCXX_RELEASE == 15 && __GLIBCXX__ != 20251203) ||                                      \
+#if defined(__ARM_EABI__) &&                                                                                 \
+  (!defined(__GLIBCXX__) || (_GLIBCXX_RELEASE == 15 && __GLIBCXX__ != 20251203) ||                           \
    (_GLIBCXX_RELEASE == 16 && __GLIBCXX__ != 20260430))
 #error "The ThreadX libstdc++ adapter requires Arm GNU Toolchain 15.2.Rel1 or GCC 16.1.0"
 #endif
@@ -43,7 +42,7 @@ inline int __gthread_active_p() { return runtime::detail::active() ? 1 : 0; }
 
 inline int __gthread_create(__gthread_t* thread, void* (*entry)(void*), void* argument)
 {
-    return runtime::detail::thread_create(thread, entry, argument);
+    return runtime::detail::thread_create(thread, entry, argument, {});
 }
 
 inline int __gthread_join(__gthread_t thread, void** result)

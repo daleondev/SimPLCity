@@ -27,8 +27,25 @@
 #define RUNTIME_STD_THREAD_PRIORITY 16U
 #endif
 
+namespace
+{
+    thread_local std::optional<runtime::thread::Attributes> pending_attributes;
+}
+
 namespace runtime
 {
+    namespace thread
+    {
+        void publish_attributes(const Attributes& attributes) noexcept { pending_attributes = attributes; }
+
+        std::optional<Attributes> consume_attributes() noexcept
+        {
+            auto result{ pending_attributes };
+            pending_attributes.reset();
+            return result;
+        }
+    }
+
     namespace detail
     {
         namespace
@@ -114,7 +131,12 @@ namespace runtime
             };
 
             static_assert(offsetof(ThreadControl, thread) == 0U);
-            static_assert(RUNTIME_STD_THREAD_PRIORITY < 32U);
+            static_assert((STACK_ALIGNMENT & (STACK_ALIGNMENT - 1U)) == 0U);
+            static_assert(alignof(std::max_align_t) >= STACK_ALIGNMENT);
+            static_assert(RUNTIME_STD_THREAD_STACK_SIZE >= TX_MINIMUM_STACK);
+            static_assert(RUNTIME_STD_THREAD_STACK_SIZE % STACK_ALIGNMENT == 0U);
+            static_assert(RUNTIME_STD_THREAD_STACK_SIZE <= std::numeric_limits<ULONG>::max());
+            static_assert(RUNTIME_STD_THREAD_PRIORITY < TX_MAX_PRIORITIES);
             static_assert(std::atomic_ref<void*>::required_alignment <= alignof(MutexHandle));
             static_assert(std::atomic_ref<void*>::required_alignment <= alignof(ConditionHandle));
             static_assert(std::atomic_ref<void*>::required_alignment <= alignof(SemaphoreHandle));
@@ -166,6 +188,37 @@ namespace runtime
             [[nodiscard]] unsigned int key_generation(KeyHandle key) noexcept
             {
                 return key >> KEY_INDEX_BITS;
+            }
+
+            [[nodiscard]] bool validate_thread_priority(int32_t requested_prio, UINT& validated_prio) noexcept
+            {
+                if (requested_prio == -1) {
+                    requested_prio = RUNTIME_STD_THREAD_PRIORITY;
+                }
+                if (requested_prio >= TX_MAX_PRIORITIES) {
+                    return false;
+                }
+                validated_prio = static_cast<UINT>(requested_prio);
+                return true;
+            }
+
+            [[nodiscard]] bool normalize_thread_stack_size(std::size_t requested_size,
+                                                           ULONG& normalized_size) noexcept
+            {
+                if (requested_size == 0U) {
+                    requested_size = RUNTIME_STD_THREAD_STACK_SIZE;
+                }
+                constexpr std::size_t alignment_mask{ STACK_ALIGNMENT - 1U };
+                if (requested_size < TX_MINIMUM_STACK ||
+                    requested_size > std::numeric_limits<std::size_t>::max() - alignment_mask) {
+                    return false;
+                }
+                requested_size = (requested_size + alignment_mask) & ~alignment_mask;
+                if (requested_size > std::numeric_limits<ULONG>::max()) {
+                    return false;
+                }
+                normalized_size = static_cast<ULONG>(requested_size);
+                return true;
             }
 
             [[nodiscard]] bool valid_high_resolution_counter(const HighResolutionCounter& counter) noexcept
@@ -715,7 +768,10 @@ namespace runtime
             return initialized && !interrupt_context() && tx_thread_identify() != TX_NULL;
         }
 
-        int thread_create(ThreadHandle* thread, void* (*entry)(void*), void* argument) noexcept
+        int thread_create(ThreadHandle* thread,
+                          void* (*entry)(void*),
+                          void* argument,
+                          const thread::Attributes& attributes) noexcept
         {
             const int context_status{ require_thread_context() };
             if (context_status != 0) {
@@ -724,12 +780,20 @@ namespace runtime
             if (thread == nullptr || entry == nullptr) {
                 return EINVAL;
             }
+            ULONG normalized_stack_size{};
+            if (!normalize_thread_stack_size(attributes.stack_size, normalized_stack_size)) {
+                return EINVAL;
+            }
+            UINT validated_priority{};
+            if (!validate_thread_priority(attributes.priority, validated_priority)) {
+                return EINVAL;
+            }
 
             auto* control{ new (std::nothrow) ThreadControl{} };
             if (control == nullptr) {
                 return EAGAIN;
             }
-            control->stack = ::operator new[](RUNTIME_STD_THREAD_STACK_SIZE, std::nothrow);
+            control->stack = ::operator new[](static_cast<std::size_t>(normalized_stack_size), std::nothrow);
             if (control->stack == nullptr) {
                 delete control;
                 return EAGAIN;
@@ -762,9 +826,9 @@ namespace runtime
                                                 thread_entry,
                                                 control->registry_id,
                                                 control->stack,
-                                                RUNTIME_STD_THREAD_STACK_SIZE,
-                                                RUNTIME_STD_THREAD_PRIORITY,
-                                                RUNTIME_STD_THREAD_PRIORITY,
+                                                normalized_stack_size,
+                                                validated_priority,
+                                                validated_priority,
                                                 TX_NO_TIME_SLICE,
                                                 TX_AUTO_START) };
             if (status != TX_SUCCESS) {

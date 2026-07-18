@@ -5,10 +5,24 @@
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
+#include <optional>
 
 namespace runtime
 {
     [[nodiscard]] UINT initialize() noexcept;
+
+    namespace thread
+    {
+        struct Attributes
+        {
+            int32_t priority{ -1 };
+            std::size_t stack_size{ 0UZ };
+        };
+
+        void publish_attributes(const Attributes& attributes) noexcept;
+
+        [[nodiscard]] std::optional<Attributes> consume_attributes() noexcept;
+    }
 
     namespace detail
     {
@@ -45,7 +59,10 @@ namespace runtime
         [[nodiscard]] UINT initialize_cxx_guard() noexcept;
         void destroy_cxx_guard() noexcept;
 
-        int thread_create(ThreadHandle* thread, void* (*entry)(void*), void* argument) noexcept;
+        int thread_create(ThreadHandle* thread,
+                          void* (*entry)(void*),
+                          void* argument,
+                          const thread::Attributes& attributes) noexcept;
         int thread_join(ThreadHandle thread, void** result) noexcept;
         int thread_detach(ThreadHandle thread) noexcept;
         [[nodiscard]] ThreadHandle thread_self() noexcept;

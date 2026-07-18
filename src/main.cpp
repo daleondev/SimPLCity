@@ -11,7 +11,7 @@
 
 namespace
 {
-    using namespace std::chrono_literals;
+    using namespace pnm::units::literals;
 
     constexpr auto CYCLE_INTERVAL{ 500ms };
     constexpr auto FAILURE_BLINK_INTERVAL{ 100ms };
@@ -35,6 +35,7 @@ namespace
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 {
+    runtime::thread::publish_attributes({ .stack_size = 8192UZ });
     pnm::log::initialize();
 
     const auto user_button{ hal::board::createButton(hal::board::ButtonId::User) };

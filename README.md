@@ -17,6 +17,23 @@ The runtime selects matching GCC 15.2 or GCC 16.1 libstdc++ integration
 sources at configure time. Other compiler major versions are rejected so a
 toolchain update cannot silently mix incompatible runtime internals.
 
+## Per-thread stack sizes
+
+This runtime extends `std::thread` with creation attributes for selecting an
+individual ThreadX stack size:
+
+```cpp
+std::thread logger{
+    std::thread::attributes{ .stack_size = 12U * 1024U },
+    run_logger
+};
+```
+
+`stack_size` is measured in bytes. A value of zero uses the configured
+`RUNTIME_STD_THREAD_STACK_SIZE` default. The runtime rounds valid custom sizes
+up to its stack alignment and reports invalid sizes with
+`std::errc::invalid_argument`.
+
 ## Linux Simulation & Testing
 
 To accelerate development and enable continuous integration (CI) without requiring the physical Nucleo board, this project can be compiled and run natively as a simulated Linux application. 

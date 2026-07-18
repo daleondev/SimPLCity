@@ -25,8 +25,7 @@ namespace
         std::unique_ptr<std::thread::_State> state{ static_cast<std::thread::_State*>(state_pointer) };
         try {
             state->_M_run();
-        }
-        catch (...) {
+        } catch (...) {
             // The C++ standard requires an exception escaping a thread's
             // initial function to terminate the process. Never unwind through
             // the ThreadX C entry frame.
@@ -42,9 +41,12 @@ namespace std
 
     void thread::_M_start_thread(_State_ptr state, void (*dependency)())
     {
+        auto attributes{ runtime::thread::consume_attributes() };
+
         static_cast<void>(dependency);
         __gthread_t native_thread{};
-        const int error{ __gthread_create(&native_thread, run_thread_state, state.get()) };
+        const int error{ runtime::detail::thread_create(
+          &native_thread, run_thread_state, state.get(), attributes.value_or({})) };
         if (error != 0) {
             std::__throw_system_error(error);
         }

@@ -71,7 +71,6 @@ endif()
 target_compile_definitions(runtime_libstdcxx
     PUBLIC
         THREADX_STD_ENABLED=1
-        RUNTIME_STD_THREAD_STACK_SIZE=8192U
         _GLIBCXX_HAS_GTHREADS=1
         _GLIBCXX_HAVE_POSIX_SEMAPHORE=1
         _GLIBCXX_USE_SCHED_YIELD=1
