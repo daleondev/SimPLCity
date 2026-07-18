@@ -19,20 +19,28 @@ toolchain update cannot silently mix incompatible runtime internals.
 
 ## Per-thread stack sizes
 
-This runtime extends `std::thread` with creation attributes for selecting an
-individual ThreadX stack size:
+Thread attributes can be published without patching the GCC `std::thread`
+implementation:
 
 ```cpp
-std::thread logger{
-    std::thread::attributes{ .stack_size = 12U * 1024U },
-    run_logger
-};
+#include "runtime/thread.hpp"
+
+runtime::thread::publish_attributes({
+    .priority = 17,
+    .stack_size = 12U * 1024U,
+});
+std::thread logger{ run_logger };
 ```
 
-`stack_size` is measured in bytes. A value of zero uses the configured
-`RUNTIME_STD_THREAD_STACK_SIZE` default. The runtime rounds valid custom sizes
-up to its stack alignment and reports invalid sizes with
-`std::errc::invalid_argument`.
+The attributes apply once, to the next `std::thread` or `std::jthread` created
+by the calling thread. Publish them immediately before constructing that
+thread. Publishing again before construction replaces the pending attributes.
+
+`stack_size` is measured in bytes; zero uses the configured
+`RUNTIME_STD_THREAD_STACK_SIZE` default. `priority` follows ThreadX ordering,
+where zero is the highest priority; `-1` uses the configured default. The
+runtime rounds valid custom stack sizes up to its stack alignment and reports
+invalid stack sizes or priorities with `std::errc::invalid_argument`.
 
 ## Linux Simulation & Testing
 

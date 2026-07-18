@@ -195,7 +195,7 @@ namespace runtime
                 if (requested_prio == -1) {
                     requested_prio = RUNTIME_STD_THREAD_PRIORITY;
                 }
-                if (requested_prio >= TX_MAX_PRIORITIES) {
+                if (requested_prio < 0 || requested_prio >= static_cast<int32_t>(TX_MAX_PRIORITIES)) {
                     return false;
                 }
                 validated_prio = static_cast<UINT>(requested_prio);

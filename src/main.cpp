@@ -3,6 +3,7 @@
 #include "hal/hal.hpp"
 
 #include "pneumo/pneumo.hpp"
+#include "runtime/thread.hpp"
 
 #include <chrono>
 #include <print>

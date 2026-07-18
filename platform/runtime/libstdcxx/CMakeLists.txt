@@ -48,6 +48,7 @@ endif()
 
 target_include_directories(runtime_libstdcxx
     BEFORE PUBLIC
+        ${PROJECT_SOURCE_DIR}/platform
         ${PROJECT_SOURCE_DIR}/platform/runtime
         $<$<STREQUAL:${CMAKE_SYSTEM_NAME},Generic>:${RUNTIME_LIBSTDCXX_VENDOR_DIR}>
         ${CMAKE_CURRENT_SOURCE_DIR}/include

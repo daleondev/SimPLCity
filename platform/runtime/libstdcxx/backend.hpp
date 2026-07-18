@@ -1,8 +1,9 @@
 #pragma once
 
+#include "runtime/thread.hpp"
+
 #include <tx_api.h>
 
-#include <cstddef>
 #include <cstdint>
 #include <ctime>
 #include <optional>
@@ -13,14 +14,6 @@ namespace runtime
 
     namespace thread
     {
-        struct Attributes
-        {
-            int32_t priority{ -1 };
-            std::size_t stack_size{ 0UZ };
-        };
-
-        void publish_attributes(const Attributes& attributes) noexcept;
-
         [[nodiscard]] std::optional<Attributes> consume_attributes() noexcept;
     }
 
