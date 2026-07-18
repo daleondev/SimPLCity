@@ -105,6 +105,10 @@ extern "C" [[gnu::weak, gnu::noinline, noreturn]] void hal_panic_handler(
 {
     panic_write("[hal][panic] ");
     panic_write(info != nullptr && info->message != nullptr ? info->message : "fatal error");
+    if (info != nullptr && info->detail != nullptr) {
+        panic_write(": ");
+        panic_write(info->detail);
+    }
     if (info != nullptr && info->file != nullptr) {
         panic_write("\n  at ");
         panic_write(info->file);

@@ -18,6 +18,10 @@ namespace hal
 
     [[noreturn]] auto panic(const char* message,
                             std::source_location location = std::source_location::current()) noexcept -> void;
+
+    [[noreturn]] auto panic(const char* message,
+                            const char* detail,
+                            std::source_location location = std::source_location::current()) noexcept -> void;
 }
 
 #endif

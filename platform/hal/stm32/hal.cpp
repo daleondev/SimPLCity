@@ -83,6 +83,10 @@ namespace
     {
         panic_write("\r\n[hal][panic] ");
         panic_write(info != nullptr && info->message != nullptr ? info->message : "fatal error");
+        if (info != nullptr && info->detail != nullptr) {
+            panic_write(": ");
+            panic_write(info->detail);
+        }
         if (info != nullptr && info->file != nullptr) {
             panic_write("\r\n  at ");
             panic_write(info->file);

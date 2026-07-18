@@ -84,6 +84,7 @@ add_test(
     COMMAND ${CMAKE_COMMAND}
             -DPROBE=$<TARGET_FILE:runtime_terminate_probe>
             -DPROBE_MODE=application
+            "-DEXPECTED_PANIC=Unhandled C++ exception: uncaught application exception"
             -P ${CMAKE_CURRENT_SOURCE_DIR}/verify_terminate.cmake
 )
 add_test(
@@ -91,12 +92,38 @@ add_test(
     COMMAND ${CMAKE_COMMAND}
             -DPROBE=$<TARGET_FILE:runtime_terminate_probe>
             -DPROBE_MODE=thread
+            "-DEXPECTED_PANIC=Unhandled C++ exception: uncaught thread exception"
             -P ${CMAKE_CURRENT_SOURCE_DIR}/verify_terminate.cmake
 )
 add_test(
     NAME runtime.terminate.static_initialization
     COMMAND ${CMAKE_COMMAND}
             -DPROBE=$<TARGET_FILE:runtime_static_terminate_probe>
+            "-DEXPECTED_PANIC=Unhandled C++ exception: uncaught static initialization exception"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/verify_terminate.cmake
+)
+add_test(
+    NAME runtime.terminate.non_std_exception
+    COMMAND ${CMAKE_COMMAND}
+            -DPROBE=$<TARGET_FILE:runtime_terminate_probe>
+            -DPROBE_MODE=non_std
+            "-DEXPECTED_PANIC=Unhandled non-std C++ exception"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/verify_terminate.cmake
+)
+add_test(
+    NAME runtime.terminate.explicit
+    COMMAND ${CMAKE_COMMAND}
+            -DPROBE=$<TARGET_FILE:runtime_terminate_probe>
+            -DPROBE_MODE=explicit
+            "-DEXPECTED_PANIC=Runtime terminated without an active exception"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/verify_terminate.cmake
+)
+add_test(
+    NAME runtime.terminate.bad_alloc
+    COMMAND ${CMAKE_COMMAND}
+            -DPROBE=$<TARGET_FILE:runtime_terminate_probe>
+            -DPROBE_MODE=bad_alloc
+            "-DEXPECTED_PANIC=Unhandled C++ exception: std::bad_alloc"
             -P ${CMAKE_CURRENT_SOURCE_DIR}/verify_terminate.cmake
 )
 add_test(
@@ -117,6 +144,9 @@ set_tests_properties(
     runtime.terminate.application
     runtime.terminate.thread
     runtime.terminate.static_initialization
+    runtime.terminate.non_std_exception
+    runtime.terminate.explicit
+    runtime.terminate.bad_alloc
     runtime.panic.error_handler
     runtime.panic.override
     PROPERTIES TIMEOUT 10

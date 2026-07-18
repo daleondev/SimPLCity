@@ -13,6 +13,7 @@ extern "C" {
 typedef struct
 {
     const char* message;
+    const char* detail;
     const char* file;
     const char* function;
     uint32_t line;

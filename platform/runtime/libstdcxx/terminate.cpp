@@ -1,50 +1,30 @@
 #include "hal/hal.hpp"
 
-#include <algorithm>
-#include <array>
 #include <exception>
-#include <ranges>
 
 namespace
 {
-    template<std::size_t Size>
-    auto append(std::array<char, Size>& buffer, std::size_t& length, const char* text) noexcept -> void
-    {
-        if (!text || length >= Size) {
-            return;
-        }
-
-        auto available{ Size - length - 1U };
-        auto str{ std::ranges::subrange(text, std::unreachable_sentinel) |
-                  std::views::take_while([](char c) noexcept { return c != '\0'; }) |
-                  std::views::take(available) };
-        auto result{ std::ranges::copy(str, buffer.begin() + length) };
-
-        length = static_cast<std::size_t>(std::distance(buffer.begin(), result.out));
-        buffer[length] = '\0';
-    }
-
     [[noreturn]] auto runtime_terminate_handler() noexcept -> void
     {
-        std::array<char, 256UZ> message{};
-        auto length{ 0UZ };
-
-        auto exception{ std::current_exception() };
-        if (exception) {
-            try {
-                std::rethrow_exception(exception);
-            } catch (const std::exception& e) {
-                append(message, length, "Unhandled exception: ");
-                append(message, length, e.what());
-            } catch (...) {
-                append(message, length, "Unhandled non-std exception");
-            }
-        }
-        else {
-            append(message, length, "Runtime terminated without exception");
+        const auto exception{ std::current_exception() };
+        if (!exception) {
+            hal::panic("Runtime terminated without an active exception");
         }
 
-        hal::panic(message.data());
+#if defined(__cpp_lib_exception_ptr_cast) && __cpp_lib_exception_ptr_cast >= 202506L
+        if (const auto* error{ std::exception_ptr_cast<std::exception>(exception) }) {
+            hal::panic("Unhandled C++ exception", error->what());
+        }
+        hal::panic("Unhandled non-std C++ exception");
+#else
+        try {
+            std::rethrow_exception(exception);
+        } catch (const std::exception& error) {
+            hal::panic("Unhandled C++ exception", error.what());
+        } catch (...) {
+            hal::panic("Unhandled non-std C++ exception");
+        }
+#endif
     }
 }
 
