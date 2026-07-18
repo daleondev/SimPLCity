@@ -2,7 +2,7 @@
 #include "hal/drivers/factory/ethernet.hpp"
 #include "hal/hal.hpp"
 
-#include "pneumo/meta.hpp"
+#include "pneumo/pneumo.hpp"
 
 #include <chrono>
 #include <print>
@@ -27,20 +27,17 @@ namespace
         }
 
         if (user_button_press_pending.exchange(false, std::memory_order_acq_rel)) {
-            std::println("[input] user button pressed");
+            pnm::log::info("[input] user button pressed");
             yellow_led->toggle();
         }
     }
 }
 
-enum class TestEnum
-{
-    Hello,
-    World
-};
-
 int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 {
+    pnm::log::initialize();
+    pnm::log::set_default_sink(pnm::log::Level::Trace, pnm::log::Level::Critical, pnm::log::std_out);
+
     const auto user_button{ hal::board::createButton(hal::board::ButtonId::User) };
     if (!user_button) {
         throw(std::runtime_error("user button creation failed"));
@@ -60,9 +57,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
         report_user_button_press();
         green_led->toggle();
         std::this_thread::sleep_for(CYCLE_INTERVAL);
-        std::println("{} {}",
-                     pnm::meta::enumeration::enumerator_name<TestEnum::Hello>().data(),
-                     pnm::meta::enumeration::enumerator_name<TestEnum::World>().data());
+        pnm::log::info("Hello World!");
     }
 
     std::unreachable();

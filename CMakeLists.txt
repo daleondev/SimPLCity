@@ -34,8 +34,6 @@ else()
     message(FATAL_ERROR "Unsupported target system: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-set(BUILD_SAMPLES OFF)
-set(BUILD_TESTS OFF)
 add_subdirectory(external/pneumo)
 
 add_executable(${PROJECT_NAME})
@@ -50,6 +48,11 @@ target_link_libraries(${PROJECT_NAME}
 target_compile_options(${PROJECT_NAME}
     PRIVATE
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-Wall;-Wextra;-Wpedantic>
+)
+
+target_compile_definitions(${PROJECT_NAME}
+    PRIVATE
+        RUNTIME_APPLICATION_THREAD_STACK_SIZE=8192U
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Generic")
