@@ -36,7 +36,6 @@ namespace
 int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 {
     pnm::log::initialize();
-    pnm::log::set_default_sink(pnm::log::Level::Trace, pnm::log::Level::Critical, pnm::log::std_out);
 
     const auto user_button{ hal::board::createButton(hal::board::ButtonId::User) };
     if (!user_button) {
