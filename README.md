@@ -19,22 +19,30 @@ toolchain update cannot silently mix incompatible runtime internals.
 
 ## Per-thread stack sizes
 
-Thread attributes can be published without patching the GCC `std::thread`
-implementation:
+Use the runtime factory to attach ThreadX creation attributes to an individual
+standard thread without patching GCC's `std::thread` implementation:
 
 ```cpp
 #include "runtime/thread.hpp"
 
-runtime::thread::publish_attributes({
-    .priority = 17,
-    .stack_size = 12U * 1024U,
-});
-std::thread logger{ run_logger };
+auto logger = runtime::thread::create(
+    {
+        .priority = 17,
+        .stack_size = 12U * 1024U,
+    },
+    run_logger,
+    logger_argument);
 ```
 
-The attributes apply once, to the next `std::thread` or `std::jthread` created
-by the calling thread. Publish them immediately before constructing that
-thread. Publishing again before construction replaces the pending attributes.
+`create_jthread` provides the corresponding `std::jthread` factory and
+preserves its stop-token injection behavior. Both factories decay-copy the
+callable and arguments before publishing the attributes, clear them if
+construction fails, and restore any attributes previously published by the
+calling thread.
+
+`publish_attributes` remains available as a low-level escape hatch when an API
+creates a standard thread internally. Publish immediately before calling that
+API; the attributes apply once to its next standard-thread construction.
 
 `stack_size` is measured in bytes; zero uses the configured
 `RUNTIME_STD_THREAD_STACK_SIZE` default. `priority` follows ThreadX ordering,

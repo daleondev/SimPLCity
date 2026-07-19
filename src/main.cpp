@@ -3,6 +3,7 @@
 #include "hal/hal.hpp"
 
 #include "pneumo/pneumo.hpp"
+#include "runtime/thread.hpp"
 
 #include <chrono>
 #include <print>
@@ -21,14 +22,8 @@ namespace
 
     auto report_user_button_press() -> void
     {
-        static const auto yellow_led{ hal::board::createLed(hal::board::LedId::Yellow) };
-        if (!yellow_led) {
-            throw(std::runtime_error("yellow LED creation failed"));
-        }
-
         if (user_button_press_pending.exchange(false, std::memory_order_acq_rel)) {
-            pnm::log::info("[input] user button pressed");
-            yellow_led->toggle();
+            pnm::log::info("user button pressed");
         }
     }
 }
@@ -52,6 +47,20 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
     if (!green_led) {
         throw(std::runtime_error("green LED creation failed"));
     }
+
+    auto t = runtime::thread::create({ .priority = 20, .stack_size = 4096UZ }, []() {
+        static const auto yellow_led{ hal::board::createLed(hal::board::LedId::Yellow) };
+        if (!yellow_led) {
+            throw(std::runtime_error("yellow LED creation failed"));
+        }
+
+        while (true) {
+            yellow_led->toggle();
+            std::this_thread::sleep_for(CYCLE_INTERVAL);
+        }
+
+        std::unreachable();
+    });
 
     while (true) {
         report_user_button_press();

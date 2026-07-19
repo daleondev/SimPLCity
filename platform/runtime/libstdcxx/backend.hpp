@@ -22,8 +22,10 @@ namespace runtime
             std::size_t stack_size{};
         };
 
-        // Applies attributes to the next std::thread or std::jthread created by
-        // the calling thread. Publishing again before creation replaces them.
+        // Low-level escape hatch for APIs that create a thread internally.
+        // Prefer runtime::thread::create/create_jthread for direct creation.
+        // The attributes apply once to the next standard thread created by the
+        // calling thread; publishing again first replaces them.
         void publish_attributes(const Attributes& attributes) noexcept;
 
         [[nodiscard]] std::optional<Attributes> consume_attributes() noexcept;

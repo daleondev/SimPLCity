@@ -17,6 +17,7 @@
 #include <future>
 #include <latch>
 #include <limits>
+#include <memory>
 #include <mutex>
 #include <random>
 #include <semaphore>
@@ -608,7 +609,7 @@ TEST(RuntimeLibstdcxx, JoinedThreadsReleaseLinuxHostStackMetadata)
 }
 #endif
 
-TEST(RuntimeLibstdcxx, ThreadAttributesSelectStackSizePriorityAndForwardArguments)
+TEST(RuntimeLibstdcxx, ThreadFactorySelectsStackSizePriorityAndForwardsArguments)
 {
     constexpr std::size_t stack_alignment{ 8U };
     constexpr std::size_t requested_stack_size{ 8192U + 13U };
@@ -618,20 +619,24 @@ TEST(RuntimeLibstdcxx, ThreadAttributesSelectStackSizePriorityAndForwardArgument
     ULONG observed_stack_size{};
     UINT observed_priority{};
     int result{};
+    auto right{ std::make_unique<int>(23) };
 
-    runtime::thread::publish_attributes(
-      { .priority = requested_priority, .stack_size = requested_stack_size });
-    std::thread worker{ [&](int left, int right) {
+    auto worker =
+      runtime::thread::create({ .priority = requested_priority, .stack_size = requested_stack_size },
+                              [&](int left, auto right_argument) {
         TX_THREAD* const current{ tx_thread_identify() };
         if (current != nullptr) {
             observed_stack_size = current->tx_thread_stack_size;
             observed_priority = current->tx_thread_priority;
         }
-        result = left + right;
-    }, 19, 23 };
+        result = left + *right_argument;
+    },
+                              19,
+                              std::move(right));
     worker.join();
 
     EXPECT_EQ(result, 42);
+    EXPECT_EQ(right, nullptr);
     // Stack checking reserves one aligned word at creation time.
     EXPECT_EQ(observed_stack_size, static_cast<ULONG>(normalized_stack_size - sizeof(ULONG)));
     EXPECT_EQ(observed_priority, static_cast<UINT>(requested_priority));
@@ -645,15 +650,15 @@ TEST(RuntimeLibstdcxx, ZeroThreadAttributeUsesConfiguredDefault)
     std::thread ordinary{ [&] { ordinary_stack_size = tx_thread_identify()->tx_thread_stack_size; } };
     ordinary.join();
 
-    runtime::thread::publish_attributes({});
-    std::thread attributed{ [&] { attributed_stack_size = tx_thread_identify()->tx_thread_stack_size; } };
+    auto attributed = runtime::thread::create(
+      {}, [&] { attributed_stack_size = tx_thread_identify()->tx_thread_stack_size; });
     attributed.join();
 
     EXPECT_NE(ordinary_stack_size, 0U);
     EXPECT_EQ(attributed_stack_size, ordinary_stack_size);
 }
 
-TEST(RuntimeLibstdcxx, ThreadAttributesAreConsumedOnce)
+TEST(RuntimeLibstdcxx, ThreadFactoryAttributesDoNotLeak)
 {
     constexpr std::size_t requested_stack_size{ 8192U };
     ULONG default_stack_size{};
@@ -663,8 +668,9 @@ TEST(RuntimeLibstdcxx, ThreadAttributesAreConsumedOnce)
     std::thread baseline{ [&] { default_stack_size = tx_thread_identify()->tx_thread_stack_size; } };
     baseline.join();
 
-    runtime::thread::publish_attributes({ .stack_size = requested_stack_size });
-    std::thread attributed{ [&] { attributed_stack_size = tx_thread_identify()->tx_thread_stack_size; } };
+    auto attributed = runtime::thread::create({ .stack_size = requested_stack_size }, [&] {
+        attributed_stack_size = tx_thread_identify()->tx_thread_stack_size;
+    });
     attributed.join();
 
     std::thread following{ [&] { following_stack_size = tx_thread_identify()->tx_thread_stack_size; } };
@@ -675,20 +681,19 @@ TEST(RuntimeLibstdcxx, ThreadAttributesAreConsumedOnce)
     EXPECT_EQ(following_stack_size, default_stack_size);
 }
 
-TEST(RuntimeLibstdcxx, ThreadAttributesAreIsolatedByCreatingThread)
+TEST(RuntimeLibstdcxx, ThreadFactoriesAreIsolatedByCreatingThread)
 {
     constexpr std::array<std::size_t, 2U> requested_stack_sizes{ 8192U, 12288U };
     std::array<ULONG, requested_stack_sizes.size()> observed_stack_sizes{};
-    std::barrier attributes_published{ static_cast<std::ptrdiff_t>(requested_stack_sizes.size()) };
+    std::barrier start{ static_cast<std::ptrdiff_t>(requested_stack_sizes.size()) };
     std::array<std::thread, requested_stack_sizes.size()> creators;
 
     for (std::size_t index{}; index < creators.size(); ++index) {
         creators[index] = std::thread{ [&, index] {
-            runtime::thread::publish_attributes({ .stack_size = requested_stack_sizes[index] });
-            attributes_published.arrive_and_wait();
-            std::thread child{ [&] {
+            start.arrive_and_wait();
+            auto child = runtime::thread::create({ .stack_size = requested_stack_sizes[index] }, [&] {
                 observed_stack_sizes[index] = tx_thread_identify()->tx_thread_stack_size;
-            } };
+            });
             child.join();
         } };
     }
@@ -702,12 +707,11 @@ TEST(RuntimeLibstdcxx, ThreadAttributesAreIsolatedByCreatingThread)
     }
 }
 
-TEST(RuntimeLibstdcxx, ThreadAttributesRejectInvalidValues)
+TEST(RuntimeLibstdcxx, ThreadFactoryRejectsInvalidAttributes)
 {
     const auto creation_error = [](runtime::thread::Attributes attributes) {
         try {
-            runtime::thread::publish_attributes(attributes);
-            std::thread unexpected{ [] {} };
+            auto unexpected = runtime::thread::create(attributes, [] {});
             unexpected.join();
             return std::error_code{};
         } catch (const std::system_error& error) {
@@ -720,6 +724,108 @@ TEST(RuntimeLibstdcxx, ThreadAttributesRejectInvalidValues)
     EXPECT_EQ(creation_error({ .stack_size = std::numeric_limits<std::size_t>::max() }), invalid_argument);
     EXPECT_EQ(creation_error({ .priority = -2 }), invalid_argument);
     EXPECT_EQ(creation_error({ .priority = static_cast<std::int32_t>(TX_MAX_PRIORITIES) }), invalid_argument);
+}
+
+TEST(RuntimeLibstdcxx, ThreadFactoryRestoresPreviouslyPublishedAttributes)
+{
+    constexpr std::size_t factory_stack_size{ 8192U };
+    constexpr std::size_t published_stack_size{ 12288U };
+    ULONG factory_observed_stack_size{};
+    ULONG published_observed_stack_size{};
+
+    runtime::thread::publish_attributes({ .stack_size = published_stack_size });
+    auto factory_thread = runtime::thread::create({ .stack_size = factory_stack_size }, [&] {
+        factory_observed_stack_size = tx_thread_identify()->tx_thread_stack_size;
+    });
+    factory_thread.join();
+
+    std::thread published_thread{ [&] {
+        published_observed_stack_size = tx_thread_identify()->tx_thread_stack_size;
+    } };
+    published_thread.join();
+
+    EXPECT_EQ(factory_observed_stack_size, static_cast<ULONG>(factory_stack_size - sizeof(ULONG)));
+    EXPECT_EQ(published_observed_stack_size, static_cast<ULONG>(published_stack_size - sizeof(ULONG)));
+}
+
+TEST(RuntimeLibstdcxx, ThreadFactoryPreparationFailureDoesNotDisturbPendingAttributes)
+{
+    class ThrowWhenCopied
+    {
+      public:
+        ThrowWhenCopied() = default;
+        ThrowWhenCopied(const ThrowWhenCopied&) { throw std::runtime_error{ "copy failed" }; }
+        ThrowWhenCopied(ThrowWhenCopied&&) = default;
+        void operator()() const {}
+    };
+
+    constexpr std::size_t published_stack_size{ 8192U };
+    ULONG observed_stack_size{};
+    ThrowWhenCopied callable;
+    bool threw{};
+
+    runtime::thread::publish_attributes({ .stack_size = published_stack_size });
+    try {
+        auto unexpected = runtime::thread::create({ .stack_size = 12288U }, callable);
+        unexpected.join();
+    } catch (const std::runtime_error&) {
+        threw = true;
+    }
+
+    std::thread published_thread{ [&] { observed_stack_size = tx_thread_identify()->tx_thread_stack_size; } };
+    published_thread.join();
+
+    EXPECT_TRUE(threw);
+    EXPECT_EQ(observed_stack_size, static_cast<ULONG>(published_stack_size - sizeof(ULONG)));
+}
+
+TEST(RuntimeLibstdcxx, ThreadFactoryCreationFailureReleasesInvocationAndRestoresAttributes)
+{
+    constexpr std::size_t published_stack_size{ 8192U };
+    ULONG observed_stack_size{};
+    auto lifetime{ std::make_shared<int>(42) };
+    const std::weak_ptr<int> weak_lifetime{ lifetime };
+
+    runtime::thread::publish_attributes({ .stack_size = published_stack_size });
+    try {
+        auto unexpected = runtime::thread::create({ .stack_size = TX_MINIMUM_STACK - 1U }, [lifetime] {});
+        unexpected.join();
+        ADD_FAILURE() << "thread creation unexpectedly succeeded";
+    } catch (const std::system_error& error) {
+        EXPECT_EQ(error.code(), std::make_error_code(std::errc::invalid_argument));
+    }
+    lifetime.reset();
+
+    std::thread published_thread{ [&] { observed_stack_size = tx_thread_identify()->tx_thread_stack_size; } };
+    published_thread.join();
+
+    EXPECT_TRUE(weak_lifetime.expired());
+    EXPECT_EQ(observed_stack_size, static_cast<ULONG>(published_stack_size - sizeof(ULONG)));
+}
+
+TEST(RuntimeLibstdcxx, JthreadFactoryPreservesBothInvocationForms)
+{
+    constexpr std::size_t requested_stack_size{ 8192U };
+    ULONG observed_stack_size{};
+    bool stop_possible{};
+    int result{};
+    int plain_result{};
+
+    auto worker = runtime::thread::create_jthread(
+      { .stack_size = requested_stack_size }, [&](std::stop_token token, int value) {
+        observed_stack_size = tx_thread_identify()->tx_thread_stack_size;
+        stop_possible = token.stop_possible();
+        result = value;
+    }, 42);
+    worker.join();
+
+    auto plain_worker = runtime::thread::create_jthread({}, [&](int value) { plain_result = value; }, 43);
+    plain_worker.join();
+
+    EXPECT_EQ(observed_stack_size, static_cast<ULONG>(requested_stack_size - sizeof(ULONG)));
+    EXPECT_TRUE(stop_possible);
+    EXPECT_EQ(result, 42);
+    EXPECT_EQ(plain_result, 43);
 }
 
 TEST(RuntimeLibstdcxx, ContendedStaticInitialization)
