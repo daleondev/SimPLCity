@@ -5,6 +5,7 @@ target_sources(runtime_libc
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/libc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/filesystem.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/storage_media.cpp
 )
 
 target_link_libraries(runtime_libc
@@ -12,6 +13,7 @@ target_link_libraries(runtime_libc
         platform::hal
     PUBLIC
         filex
+        levelx
         threadx
         project_compiler_settings
 )
@@ -37,6 +39,10 @@ target_compile_options(runtime_libc
     PRIVATE
         $<$<COMPILE_LANG_AND_ID:C,GNU,Clang>:-Wall;-Wextra;-Wpedantic>
 )
+
+if(RUNTIME_STORAGE_ERASE_FLASH_ON_BOOT)
+    target_compile_definitions(runtime_libc PRIVATE RUNTIME_STORAGE_ERASE_FLASH_ON_BOOT)
+endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Generic")
     # Runtime hook providers and the FileX-backed syscall adapter have no

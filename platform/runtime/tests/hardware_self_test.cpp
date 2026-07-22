@@ -571,7 +571,7 @@ namespace
     [[nodiscard]] bool test_many_streams_and_threads()
     {
         namespace fs = std::filesystem;
-        const fs::path directory{ "/stream-stress" };
+        const fs::path directory{ "/flash/stream-stress" };
         std::error_code error;
         static_cast<void>(fs::remove_all(directory, error));
         error.clear();
@@ -706,7 +706,7 @@ namespace
     [[nodiscard]] bool test_filex_standard_library()
     {
         namespace fs = std::filesystem;
-        const fs::path root{ "/runtime-self-test" };
+        const fs::path root{ "/flash/runtime-self-test" };
         const fs::path nested{ root / "nested" };
         const fs::path source{ nested / "source.txt" };
         const fs::path copy{ nested / "copy.txt" };
@@ -770,7 +770,7 @@ namespace
         }
 
         const fs::space_info volume{ fs::space(root, error) };
-        if (error || volume.capacity != 32U * 1024U || volume.available > volume.capacity) {
+        if (error || volume.capacity != 24U * 1024U * 512U || volume.available > volume.capacity) {
             return false;
         }
 
@@ -797,7 +797,7 @@ namespace
             return false;
         }
 
-        const fs::path tree{ "/self-move" };
+        const fs::path tree{ "/flash/self-move" };
         const fs::path child{ tree / "child" };
         if (!fs::create_directories(child, error) || error) {
             return false;
@@ -808,6 +808,41 @@ namespace
         const bool tree_survived{ fs::is_directory(child, error) && !error };
         static_cast<void>(fs::remove_all(tree, error));
         return rejected_self_move && tree_survived && !error;
+    }
+
+    [[nodiscard]] bool test_sd_standard_library()
+    {
+        namespace fs = std::filesystem;
+        const fs::path path{ "/sd/runtime-self-test.bin" };
+        constexpr std::array<std::uint8_t, 8U> CONTENT{
+            0x53U, 0x44U, 0x4DU, 0x4DU, 0x43U, 0x2DU, 0x4FU, 0x4BU
+        };
+        std::error_code error;
+        static_cast<void>(fs::remove(path, error));
+        error.clear();
+        {
+            std::ofstream stream{ path, std::ios::binary | std::ios::trunc };
+            stream.write(reinterpret_cast<const char*>(CONTENT.data()),
+                         static_cast<std::streamsize>(CONTENT.size()));
+            if (!stream) {
+                return false;
+            }
+        }
+        std::array<std::uint8_t, CONTENT.size()> input{};
+        {
+            std::ifstream stream{ path, std::ios::binary };
+            stream.read(reinterpret_cast<char*>(input.data()),
+                        static_cast<std::streamsize>(input.size()));
+            if (!stream || input != CONTENT) {
+                return false;
+            }
+        }
+        const fs::space_info volume{ fs::space("/sd", error) };
+        const bool passed{ !error && volume.capacity >= 8U * 1024U * 1024U * 1024U &&
+                           volume.available <= volume.capacity };
+        error.clear();
+        static_cast<void>(fs::remove(path, error));
+        return passed && !error;
     }
 
     struct NamedTest
@@ -825,7 +860,8 @@ namespace
         NamedTest{ "stream and thread stress", test_many_streams_and_threads },
         NamedTest{ "clocks", test_clocks },
         NamedTest{ "HAL timer", test_hardware_timer },
-        NamedTest{ "FileX standard library", test_filex_standard_library },
+        NamedTest{ "LevelX/FileX flash standard library", test_filex_standard_library },
+        NamedTest{ "FileX SD standard library", test_sd_standard_library },
     };
 
     [[noreturn]] void finish(bool passed, std::size_t phase)

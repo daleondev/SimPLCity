@@ -50,6 +50,30 @@ where zero is the highest priority; `-1` uses the configured default. The
 runtime rounds valid custom stack sizes up to its stack alignment and reports
 invalid stack sizes or priorities with `std::errc::invalid_argument`.
 
+## Persistent storage
+
+The runtime exposes a read-only virtual root with two independent FileX
+volumes:
+
+* `/flash` is a 12 MiB FAT volume backed by LevelX on the external W25Q128 NOR
+  flash. The remaining NOR capacity is reserved for LevelX reclamation and
+  wear leveling. A completely blank chip is formatted once; an existing but
+  invalid volume is never erased automatically.
+* `/sd` is the existing FAT volume on the SDMMC card. Firmware never formats
+  the card automatically.
+
+Relative paths start at `/flash`. Renaming across the two volumes fails with
+`EXDEV`, as it would across separate mounted filesystems. The old volatile RAM
+disk is no longer part of the linker layout or runtime.
+
+The SDMMC data and command inputs use explicit pull-ups. Card detect is PG2,
+which is `D49` on **CN8 pin 14** of the NUCLEO-H753ZI; CN8 pin 8 is PC11/D46
+and is already used by SDMMC D3. Card detect is advisory, so a missing DET wire
+does not prevent mounting a readable card.
+
+`RUNTIME_STORAGE_ERASE_FLASH_ON_BOOT=ON` is a destructive recovery option for
+development only. Its default is `OFF`.
+
 ## Linux Simulation & Testing
 
 To accelerate development and enable continuous integration (CI) without requiring the physical Nucleo board, this project can be compiled and run natively as a simulated Linux application. 
@@ -85,6 +109,11 @@ cmake --build --preset runtime-test-stm32
 The image reports `0x600D600D` in
 `runtime_hardware_self_test_status` after all runtime phases pass. It can be
 flashed and inspected with OpenOCD even when no serial terminal is available.
+The storage phases exercise LevelX/FileX on `/flash` and a real write/read
+round trip on `/sd`.
+
+Use OpenOCD's `target/stm32h7x_dual_bank.cfg` target for this MCU. The test
+image can exceed the first 1 MiB internal flash bank.
 
 ### Build Linux Simulation
 

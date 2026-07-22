@@ -23,6 +23,18 @@ void runtime_libc_initialize(void)
 #include <stdlib.h>
 #include <string.h>
 
+/* Newlib's global reentrancy pointer is normally installed by ThreadX, but
+ * C++ constructors run before tx_kernel_enter(). Make pre-main allocation
+ * use Newlib's global state instead of passing a null reentrancy pointer into
+ * malloc. The lock hooks below already treat this phase as single-threaded. */
+static void runtime_libc_preinitialize(void)
+{
+    _impure_ptr = &_impure_data;
+}
+
+__attribute__((used, section(".preinit_array")))
+static void (*const runtime_libc_preinitializer)(void) = runtime_libc_preinitialize;
+
 /* Newlib deliberately keeps this type opaque, allowing the target to store
  * its native lock directly in each static and dynamically allocated object. */
 struct __lock

@@ -56,9 +56,9 @@
 TX_THREAD       fx_app_thread;
 
 /* Buffer for FileX FX_MEDIA sector cache. */
-ALIGN_32BYTES (uint32_t fx_sram_media_memory[FX_SRAM_SECTOR_SIZE / sizeof(uint32_t)]);
+ALIGN_32BYTES (uint32_t fx_sd_media_memory[FX_STM32_SD_DEFAULT_SECTOR_SIZE / sizeof(uint32_t)]);
 /* Define FileX global data structures.  */
-FX_MEDIA        sram_disk;
+FX_MEDIA        sdio_disk;
 
 /* USER CODE BEGIN PV */
 
@@ -131,44 +131,20 @@ UINT MX_FileX_Init(VOID *memory_ptr)
  */
 void fx_app_thread_entry(ULONG thread_input)
 {
-  UINT sram_status = FX_SUCCESS;
+  UINT sd_status = FX_SUCCESS;
   /* USER CODE BEGIN fx_app_thread_entry 0 */
 
   /* USER CODE END fx_app_thread_entry 0 */
 
-  /* Format the SRAM_BASE memory as FAT */
-  sram_status =  fx_media_format(&sram_disk,                              // RamDisk pointer
-                                 fx_stm32_sram_driver,                    // Driver entry
-                                 (VOID *)FX_NULL,                         // Device info pointer
-                                 (UCHAR *) fx_sram_media_memory,          // Media buffer pointer
-                                 sizeof(fx_sram_media_memory),            // Media buffer size
-                                 FX_SRAM_VOLUME_NAME,                     // Volume Name
-                                 FX_SRAM_NUMBER_OF_FATS,                  // Number of FATs
-                                 32,                                      // Directory Entries
-                                 FX_SRAM_HIDDEN_SECTORS,                  // Hidden sectors
-                                 FX_SRAM_DISK_SIZE / FX_SRAM_SECTOR_SIZE, // Total sectors
-                                 FX_SRAM_SECTOR_SIZE,                     // Sector size
-                                 8,                                       // Sectors per cluster
-                                 1,                                       // Heads
-                                 1);                                      // Sectors per track
+  /* Open the SD disk driver */
+  sd_status =  fx_media_open(&sdio_disk, FX_SD_VOLUME_NAME, fx_stm32_sd_driver, (VOID *)FX_NULL, (VOID *) fx_sd_media_memory, sizeof(fx_sd_media_memory));
 
-  /* Check the format sram_status */
-  if (sram_status != FX_SUCCESS)
+  /* Check the media open sd_status */
+  if (sd_status != FX_SUCCESS)
   {
-    /* USER CODE BEGIN SRAM MEDIA format error */
+    /* USER CODE BEGIN SD open error */
     while(1);
-    /* USER CODE END SRAM MEDIA format error */
-  }
-
-  /* Open the sram_disk driver */
-  sram_status =  fx_media_open(&sram_disk, FX_SRAM_VOLUME_NAME, fx_stm32_sram_driver, (VOID *)FX_NULL, (VOID *) fx_sram_media_memory, sizeof(fx_sram_media_memory));
-
-  /* Check the media open sram_status */
-  if (sram_status != FX_SUCCESS)
-  {
-    /* USER CODE BEGIN SRAM DRIVER open error */
-    while(1);
-    /* USER CODE END SRAM DRIVER open error */
+    /* USER CODE END SD open error */
   }
 
   /* USER CODE BEGIN fx_app_thread_entry 1 */

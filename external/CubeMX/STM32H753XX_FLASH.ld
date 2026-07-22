@@ -56,13 +56,12 @@ ENTRY(Reset_Handler)
 MEMORY
 {
 DTCMRAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 124K
-DTCM_STACK (xrw)      : ORIGIN = 0x2001F000, LENGTH = 4K
-AXI_SRAM (xrw)      : ORIGIN = 0x24000000, LENGTH = 480K
-FILEX_RAM (xrw)     : ORIGIN = 0x24078000, LENGTH = 32K
-RAM_D2 (xrw)      : ORIGIN = 0x30000000, LENGTH = 128K
-ETH_BUFFER_RAM (xrw)      : ORIGIN = 0x30020000, LENGTH = 128K
-ETH_DESCRIPTOR_RAM (xrw)      : ORIGIN = 0x30040000, LENGTH = 512
-RAM_D2_SRAM3 (xrw)      : ORIGIN = 0x30040200, LENGTH = 0x7E00
+DTCM_STACK (xrw)   : ORIGIN = 0x2001F000, LENGTH = 4K
+AXI_SRAM (xrw)     : ORIGIN = 0x24000000, LENGTH = 512K
+RAM_D2 (xrw)       : ORIGIN = 0x30000000, LENGTH = 128K
+ETH_BUFFER_RAM (xrw)     : ORIGIN = 0x30020000, LENGTH = 128K
+ETH_DESCRIPTOR_RAM (xrw) : ORIGIN = 0x30040000, LENGTH = 512
+RAM_D2_SRAM3 (xrw)       : ORIGIN = 0x30040200, LENGTH = 0x7E00
 RAM_D3 (xrw)      : ORIGIN = 0x38000000, LENGTH = 64K
 ITCMRAM (xrw)      : ORIGIN = 0x00000000, LENGTH = 64K
 FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 2048K
@@ -237,25 +236,8 @@ SECTIONS
   PROVIDE( __bss_start = __tbss_start );
   PROVIDE( __bss_size = __bss_end - __bss_start );
 
-  /* FileX's volatile RAM disk has a dedicated, linker-accounted AXI SRAM
-   * region. This prevents it from overlapping application data or the heap. */
-  .filex_ram_disk (NOLOAD) :
-  {
-    . = ALIGN(32);
-    __filex_ram_disk_start__ = .;
-    KEEP(*(.filex_ram_disk))
-    . = ALIGN(32);
-    __filex_ram_disk_end__ = .;
-  } >FILEX_RAM
-
-  ASSERT(SIZEOF(.filex_ram_disk) <= LENGTH(FILEX_RAM),
-         "FileX RAM disk exceeds its dedicated AXI SRAM region")
-  ASSERT((__filex_ram_disk_start__ & 31) == 0,
-         "FileX RAM disk must be 32-byte aligned")
-
   /* Reserve the minimum heap in AXI SRAM. The application-owned _sbrk()
-   * may grow from __HeapBase up to __HeapLimit. Keep this as the final
-   * output section assigned to AXI_SRAM so the upper bound remains valid. */
+   * may grow from __HeapBase up to __HeapLimit. */
   ._user_heap (NOLOAD) :
   {
     . = ALIGN(8);
@@ -268,8 +250,7 @@ SECTIONS
     __HeapLimit = ORIGIN(AXI_SRAM) + LENGTH(AXI_SRAM);
   } >AXI_SRAM
 
-  /* The MSP is used as the ThreadX system/interrupt stack. Place it at the
-   * top of DTCM and reserve it independently from the AXI SRAM heap. */
+  /* The MSP is used as the ThreadX system/interrupt stack. */
   .stack (NOLOAD) :
   {
     . = ALIGN(8);

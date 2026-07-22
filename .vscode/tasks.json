@@ -20,7 +20,7 @@
         {
             "label": "Flash",
             "type": "shell",
-            "command": "openocd -f interface/stlink.cfg -f target/stm32h7x.cfg -c \"program ./build/debug-stm32/Application.elf verify reset exit\"",
+            "command": "openocd -f interface/stlink.cfg -f target/stm32h7x_dual_bank.cfg -c \"program ./build/debug-stm32/Application.elf verify reset exit\"",
             "presentation": {
                 "reveal": "always",
                 "panel": "shared"

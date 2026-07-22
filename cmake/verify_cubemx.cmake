@@ -40,9 +40,19 @@ function(verify_cubemx_generation)
         "The project interrupt-stack layout was overwritten."
     )
     cubemx_require_text(
+        "${cubemx_directory}/CubeMX.ioc"
+        "PC8.Signal=SDMMC1_D0"
+        "The SDMMC pin configuration was overwritten."
+    )
+    cubemx_require_text(
+        "${cubemx_directory}/CubeMX.ioc"
+        "PG6.Signal=QUADSPI_BK1_NCS"
+        "The W25Q128 QuadSPI pin configuration was overwritten."
+    )
+    cubemx_require_text(
         "${linker_script}"
-        "FILEX_RAM"
-        "The dedicated FileX RAM-disk region was overwritten."
+        "AXI_SRAM"
+        "The project AXI SRAM and heap layout was overwritten."
     )
     cubemx_require_text(
         "${linker_script}"

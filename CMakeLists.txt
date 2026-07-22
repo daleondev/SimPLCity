@@ -15,6 +15,9 @@ target_compile_options(project_compiler_settings
 
 option(ENABLE_CLANG_TIDY "Run clang-tidy while compiling project-owned C++ targets" OFF)
 option(RUNTIME_HARDWARE_SELF_TEST "Build the board-resident runtime conformance image" OFF)
+option(RUNTIME_STORAGE_ERASE_FLASH_ON_BOOT
+       "Destructively erase the external NOR flash before mounting (recovery only)"
+       OFF)
 
 if(RUNTIME_HARDWARE_SELF_TEST AND NOT CMAKE_SYSTEM_NAME STREQUAL "Generic")
     message(FATAL_ERROR "RUNTIME_HARDWARE_SELF_TEST is only supported by the STM32 target")
@@ -50,10 +53,17 @@ target_compile_options(${PROJECT_NAME}
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-Wall;-Wextra;-Wpedantic>
 )
 
-target_compile_definitions(${PROJECT_NAME}
-    PRIVATE
-        RUNTIME_APPLICATION_THREAD_STACK_SIZE=8192U
-)
+if(RUNTIME_HARDWARE_SELF_TEST)
+    target_compile_definitions(${PROJECT_NAME}
+        PRIVATE
+            RUNTIME_APPLICATION_THREAD_STACK_SIZE=65536U
+    )
+else()
+    target_compile_definitions(${PROJECT_NAME}
+        PRIVATE
+            RUNTIME_APPLICATION_THREAD_STACK_SIZE=8192U
+    )
+endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Generic")
     set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY

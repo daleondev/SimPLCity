@@ -20,8 +20,10 @@
 #include "app_threadx.h"
 #include "main.h"
 #include "eth.h"
+#include "quadspi.h"
 #include "rng.h"
 #include "rtc.h"
+#include "sdmmc.h"
 #include "tim.h"
 #include "gpio.h"
 

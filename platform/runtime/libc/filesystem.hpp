@@ -25,6 +25,7 @@ namespace runtime::filex
     [[nodiscard]] auto normalizePath(const char* path, char (&output)[MAXIMUM_PATH]) noexcept -> int;
     [[nodiscard]] auto information(const char* path, EntryInformation& result) noexcept -> int;
     [[nodiscard]] auto availableSpace(std::uint64_t& bytes) noexcept -> int;
+    [[nodiscard]] auto availableSpace(const char* path, std::uint64_t& bytes) noexcept -> int;
     [[nodiscard]] auto currentPath(char (&output)[MAXIMUM_PATH]) noexcept -> int;
     [[nodiscard]] auto setCurrentPath(const char* path) noexcept -> int;
 }

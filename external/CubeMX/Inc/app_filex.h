@@ -32,7 +32,8 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "fx_api.h"
-#include "fx_stm32_sram_driver.h"
+#include "fx_stm32_sd_driver.h"
+#include "fx_stm32_levelx_nor_driver.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -81,24 +82,9 @@ UINT MX_FileX_Init(VOID *memory_ptr);
   #define FX_APP_PREEMPTION_THRESHOLD FX_APP_THREAD_PRIO
 #endif
 
-/* fx sram volume name */
-#ifndef FX_SRAM_VOLUME_NAME
-  #define FX_SRAM_VOLUME_NAME "SRAM_FLASH_DISK"
-#endif
-
-/* fx sram number of bytes per sector */
-#ifndef FX_SRAM_SECTOR_SIZE
-  #define FX_SRAM_SECTOR_SIZE 512
-#endif
-
-/* fx sram number of FATs */
-#ifndef FX_SRAM_NUMBER_OF_FATS
-  #define FX_SRAM_NUMBER_OF_FATS 1
-#endif
-
-/* fx sram Hidden sectors */
-#ifndef FX_SRAM_HIDDEN_SECTORS
-  #define FX_SRAM_HIDDEN_SECTORS 0
+/* fx sd volume name */
+#ifndef FX_SD_VOLUME_NAME
+  #define FX_SD_VOLUME_NAME "STM32_SDIO_DISK"
 #endif
 
 /* USER CODE BEGIN PD */

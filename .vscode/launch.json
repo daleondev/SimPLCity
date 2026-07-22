@@ -14,7 +14,7 @@
             "gdbPath": "arm-none-eabi-gdb",
             "configFiles": [
                 "interface/stlink.cfg",
-                "target/stm32h7x.cfg"
+                "target/stm32h7x_dual_bank.cfg"
             ],
             "searchDir": [
                 "/usr/share/openocd/scripts"

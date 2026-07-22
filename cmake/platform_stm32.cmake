@@ -8,6 +8,13 @@ set(FX_USER_FILE ${PROJECT_SOURCE_DIR}/platform/runtime/fx_user.h)
 add_subdirectory(${PROJECT_SOURCE_DIR}/external/filex)
 target_link_libraries(filex PRIVATE project_compiler_settings)
 
+set(LX_USER_FILE ${PROJECT_SOURCE_DIR}/platform/runtime/lx_user.h)
+add_subdirectory(${PROJECT_SOURCE_DIR}/external/levelx)
+target_link_libraries(levelx PRIVATE project_compiler_settings)
+get_target_property(levelx_sources levelx SOURCES)
+list(FILTER levelx_sources EXCLUDE REGEX "/(fx_nand_|fx_nor_flash_simulator|lx_nand_|lx_nor_flash_simulator)")
+set_property(TARGET levelx PROPERTY SOURCES "${levelx_sources}")
+
 # This setting changes ThreadX-visible structures and must be consistent for
 # the kernel and every consumer of tx_api.h.
 target_compile_definitions(threadx PUBLIC TX_ENABLE_STACK_CHECKING)
@@ -22,8 +29,10 @@ target_sources(platform
         ${PROJECT_SOURCE_DIR}/external/CubeMX/Src/main.c
         ${PROJECT_SOURCE_DIR}/external/CubeMX/Src/eth.c
         ${PROJECT_SOURCE_DIR}/external/CubeMX/Src/gpio.c
+        ${PROJECT_SOURCE_DIR}/external/CubeMX/Src/quadspi.c
         ${PROJECT_SOURCE_DIR}/external/CubeMX/Src/rng.c
         ${PROJECT_SOURCE_DIR}/external/CubeMX/Src/rtc.c
+        ${PROJECT_SOURCE_DIR}/external/CubeMX/Src/sdmmc.c
         ${PROJECT_SOURCE_DIR}/external/CubeMX/Src/tim.c
         ${PROJECT_SOURCE_DIR}/external/CubeMX/Src/stm32h7xx_it.c
         ${PROJECT_SOURCE_DIR}/external/CubeMX/Src/stm32h7xx_hal_msp.c
@@ -49,12 +58,16 @@ target_sources(platform
         ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_mdma.c
         ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_pwr.c
         ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_pwr_ex.c
+        ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_qspi.c
         ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal.c
         ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_i2c.c
         ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_i2c_ex.c
         ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_exti.c
         ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_rng.c
         ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_rng_ex.c
+        ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_sd.c
+        ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_sd_ex.c
+        ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_ll_sdmmc.c
         ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_rtc.c
         ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_rtc_ex.c
         ${PROJECT_SOURCE_DIR}/external/stm32h7xx-hal-driver/Src/stm32h7xx_hal_usart.c
@@ -103,6 +116,9 @@ target_compile_definitions(platform
         # SRAM2/SRAM3. SystemInit() uses this definition to enable all D2 SRAM
         # interfaces before the MPU, D-cache, and Ethernet DMA are started.
         DATA_IN_D2_SRAM
+        # The HAL default is UINT32_MAX milliseconds, which turns a missing
+        # or miswired SD data line into an apparent firmware hang.
+        SDMMC_SWDATATIMEOUT=5000U
     PUBLIC
         USE_PWR_LDO_SUPPLY
         USE_HAL_DRIVER
@@ -113,6 +129,7 @@ target_compile_definitions(platform
 target_link_libraries(platform
     PUBLIC
         filex
+        levelx
         threadx
 )
 

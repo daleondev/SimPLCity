@@ -9,8 +9,8 @@
 /*                                                                        */
 /**************************************************************************/
 
-#ifndef FX_STM32_SRAM_DRIVER_H
-#define FX_STM32_SRAM_DRIVER_H
+#ifndef LX_STM32_NOR_DRIVER_H
+#define LX_STM32_NOR_DRIVER_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,10 +21,7 @@ extern "C" {
 /* USER CODE END 1 */
 
 /* Includes ------------------------------------------------------------------*/
-#include "fx_api.h"
-
-/* include the stm32h7xx.h to be able to access the memory region defines */
-#include "stm32h7xx.h"
+#include "lx_api.h"
 
 /* USER CODE BEGIN Includes */
 
@@ -36,17 +33,7 @@ extern "C" {
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
-#define FX_SRAM_DISK_BASE_ADDRESS         D1_AXISRAM_BASE
-#define FX_SRAM_DISK_SIZE                 8192
-
 /* USER CODE BEGIN EC */
-
-/* Keep CubeMX's optional SRAM driver consistent with the project linker
-   layout. The application uses FileX's upstream generic RAM driver. */
-#undef FX_SRAM_DISK_BASE_ADDRESS
-#define FX_SRAM_DISK_BASE_ADDRESS         0x24078000UL
-#undef FX_SRAM_DISK_SIZE
-#define FX_SRAM_DISK_SIZE                 (32UL * 1024UL)
 
 /* USER CODE END EC */
 
@@ -56,7 +43,8 @@ extern "C" {
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
-VOID fx_stm32_sram_driver(FX_MEDIA *media_ptr);
+
+UINT  lx_stm32_nor_custom_driver_initialize(LX_NOR_FLASH *nor_flash);
 
 /* USER CODE BEGIN EFP */
 
@@ -70,9 +58,8 @@ VOID fx_stm32_sram_driver(FX_MEDIA *media_ptr);
 /* USER CODE BEGIN 2 */
 
 /* USER CODE END 2 */
-
 #ifdef __cplusplus
 }
 #endif
-#endif /* FX_STM32_SRAM_DRIVER_H */
+#endif /* LX_STM32_NOR_DRIVER_H */
 

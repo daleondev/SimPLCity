@@ -19,3 +19,6 @@
 [submodule "external/pneumo"]
 	path = external/pneumo
 	url = git@github.com:daleondev/pneumo.git
+[submodule "external/levelx"]
+	path = external/levelx
+	url = https://github.com/eclipse-threadx/levelx.git

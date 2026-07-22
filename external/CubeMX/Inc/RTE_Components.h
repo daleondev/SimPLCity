@@ -24,7 +24,10 @@
 /* Defines ------------------------------------------------------------------*/
 /* STMicroelectronics.X-CUBE-AZRTOS-H7.3.5.0 */
 #define FILEX_ENABLED
-#define FX_SRAM_INTERFACE
+#define LX_NOR_ENABLED
+#define FX_SD_INTERFACE
+#define FX_LX_NOR_INTERFACE
+#define LX_NOR_USE_CUSTOM_DRIVER
 #define THREADX_ENABLED
 
 #endif /* __RTE_COMPONENTS_H__ */
