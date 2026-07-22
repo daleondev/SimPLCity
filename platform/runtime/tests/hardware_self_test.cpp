@@ -55,6 +55,11 @@ extern "C" {
 // an automated probe when the serial connection is unavailable.
 std::uint32_t runtime_hardware_self_test_status{};
 std::uint32_t runtime_hardware_self_test_phase{};
+
+[[gnu::noinline, gnu::used]] void runtime_hardware_self_test_complete()
+{
+    asm volatile("" ::: "memory");
+}
 }
 
 namespace
@@ -868,6 +873,7 @@ namespace
     {
         runtime_hardware_self_test_status =
           passed ? PASS_STATUS : FAIL_STATUS | static_cast<std::uint32_t>(phase);
+        runtime_hardware_self_test_complete();
         log(passed ? "[runtime-self-test] PASS" : "[runtime-self-test] FAIL");
         while (true) {
             std::this_thread::sleep_for(1s);

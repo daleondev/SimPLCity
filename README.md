@@ -112,6 +112,18 @@ flashed and inspected with OpenOCD even when no serial terminal is available.
 The storage phases exercise LevelX/FileX on `/flash` and a real write/read
 round trip on `/sd`.
 
+Run the complete configure, build, flash, test, and reporting flow with:
+
+```sh
+./scripts/run_hardware_self_test.sh
+```
+
+In VS Code, run the `Run Hardware Self-Test` task. The runner owns its OpenOCD
+process, stops at the final result, prints the test phase and storage
+diagnostics, and returns a nonzero exit status when the test fails or times
+out. Stop an active debug session before starting it. The default 300-second
+timeout can be changed with `RUNTIME_TEST_TIMEOUT_SECONDS`.
+
 Use OpenOCD's `target/stm32h7x_dual_bank.cfg` target for this MCU. The test
 image can exceed the first 1 MiB internal flash bank.
 

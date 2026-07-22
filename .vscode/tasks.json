@@ -28,6 +28,27 @@
             "problemMatcher": []
         },
         {
+            "label": "Run Hardware Self-Test",
+            "type": "shell",
+            "command": "${workspaceFolder}/scripts/run_hardware_self_test.sh",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "clear": true
+            },
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
             "label": "Build Debug Linux",
             "type": "shell",
             "command": "cmake --preset debug-linux && cmake --build --preset debug-linux",
