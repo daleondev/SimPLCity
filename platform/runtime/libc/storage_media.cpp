@@ -1,4 +1,5 @@
 #include "storage_media.hpp"
+#include "storage_media_policy.hpp"
 
 #include <lx_api.h>
 
@@ -78,6 +79,54 @@ namespace
     constexpr std::uint32_t w25q_fast_read{ 0x0BU };
     constexpr std::uint32_t w25q_quad_page_program{ 0x32U };
     constexpr std::uint32_t w25q_sector_erase{ 0x20U };
+
+    static_assert(runtime::storage::detail::sd_data_crc_error == HAL_SD_ERROR_DATA_CRC_FAIL);
+
+    void configure_sd_handle(std::uint32_t bus_width) noexcept
+    {
+        hsd1 = {};
+        hsd1.Instance = SDMMC1;
+        hsd1.Init.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
+        hsd1.Init.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
+        hsd1.Init.BusWide = bus_width;
+        hsd1.Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
+        hsd1.Init.ClockDiv = 0U;
+    }
+
+    [[nodiscard]] auto initialize_sd_card(std::uint32_t bus_width, std::uint8_t reported_bus_width) noexcept
+      -> bool
+    {
+        configure_sd_handle(bus_width);
+        runtime_storage_diagnostics.sd_bus_width = 0U;
+        if (HAL_SD_Init(&hsd1) != HAL_OK) {
+            runtime_storage_diagnostics.sd_error = hsd1.ErrorCode;
+            runtime_storage_diagnostics.sd_blocks = hsd1.SdCard.LogBlockNbr;
+            return false;
+        }
+
+        HAL_SD_CardInfoTypeDef info{};
+        if (HAL_SD_GetCardInfo(&hsd1, &info) != HAL_OK) {
+            runtime_storage_diagnostics.sd_error = hsd1.ErrorCode;
+            runtime_storage_diagnostics.sd_blocks = hsd1.SdCard.LogBlockNbr;
+            return false;
+        }
+
+        runtime_storage_diagnostics.sd_error = HAL_SD_ERROR_NONE;
+        runtime_storage_diagnostics.sd_blocks = info.LogBlockNbr;
+        runtime_storage_diagnostics.sd_bus_width = reported_bus_width;
+        return true;
+    }
+
+    void prepare_sd_mount_retry() noexcept
+    {
+        static_cast<void>(HAL_SD_DeInit(&hsd1));
+        hsd1 = {};
+        sd_media = {};
+        sd_media_cache.fill(0U);
+        sd_mounted = false;
+        runtime_storage_diagnostics.sd_mounted = 0U;
+        runtime_storage_diagnostics.sd_bus_width = 0U;
+    }
 
     [[nodiscard]] auto qspi_command(std::uint32_t instruction,
                                     std::uint32_t address,
@@ -692,41 +741,19 @@ namespace
 #if defined(HAL_PLATFORM_STM32)
         runtime_storage_diagnostics.sd_detect_level =
           HAL_GPIO_ReadPin(SD_CARD_DETECT_GPIO_Port, SD_CARD_DETECT_Pin) == GPIO_PIN_SET ? 1U : 0U;
-        hsd1.Instance = SDMMC1;
-        hsd1.Init.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
-        hsd1.Init.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
-        hsd1.Init.BusWide = SDMMC_BUS_WIDE_4B;
-        hsd1.Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
-        hsd1.Init.ClockDiv = 0U;
-        if (HAL_SD_Init(&hsd1) == HAL_OK) {
-            runtime_storage_diagnostics.sd_bus_width = 4U;
-        }
-        else {
+        if (!initialize_sd_card(SDMMC_BUS_WIDE_4B, 4U)) {
             const std::uint32_t four_bit_error{ hsd1.ErrorCode };
             const std::uint32_t four_bit_blocks{ hsd1.SdCard.LogBlockNbr };
+            runtime_storage_diagnostics.sd_fallback_error = four_bit_error;
+            runtime_storage_diagnostics.sd_fallback_used = 1U;
             static_cast<void>(HAL_SD_DeInit(&hsd1));
-            hsd1 = {};
-            hsd1.Instance = SDMMC1;
-            hsd1.Init.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
-            hsd1.Init.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
-            hsd1.Init.BusWide = SDMMC_BUS_WIDE_1B;
-            hsd1.Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
-            hsd1.Init.ClockDiv = 0U;
-            if (HAL_SD_Init(&hsd1) != HAL_OK) {
-                runtime_storage_diagnostics.sd_error = hsd1.ErrorCode;
-                runtime_storage_diagnostics.sd_blocks =
-                  hsd1.SdCard.LogBlockNbr != 0U ? hsd1.SdCard.LogBlockNbr : four_bit_blocks;
+            if (!initialize_sd_card(SDMMC_BUS_WIDE_1B, 1U)) {
+                if (runtime_storage_diagnostics.sd_blocks == 0U) {
+                    runtime_storage_diagnostics.sd_blocks = four_bit_blocks;
+                }
                 return false;
             }
-            runtime_storage_diagnostics.sd_error = four_bit_error;
-            runtime_storage_diagnostics.sd_bus_width = 1U;
         }
-        HAL_SD_CardInfoTypeDef info{};
-        if (HAL_SD_GetCardInfo(&hsd1, &info) != HAL_OK) {
-            runtime_storage_diagnostics.sd_error = hsd1.ErrorCode;
-            return false;
-        }
-        runtime_storage_diagnostics.sd_blocks = info.LogBlockNbr;
 #else
         constexpr ULONG linux_sd_sectors{ 128U * 1024U };
         bool created{};
@@ -760,12 +787,35 @@ namespace
             }
         }
 #endif
-        const UINT open_status{ fx_media_open(&sd_media,
-                                              const_cast<CHAR*>("SD"),
-                                              direct_media_driver,
-                                              &sd_device,
-                                              sd_media_cache.data(),
-                                              sd_media_cache.size()) };
+        UINT open_status{ fx_media_open(&sd_media,
+                                        const_cast<CHAR*>("SD"),
+                                        direct_media_driver,
+                                        &sd_device,
+                                        sd_media_cache.data(),
+                                        sd_media_cache.size()) };
+#if defined(HAL_PLATFORM_STM32)
+        if (runtime::storage::detail::should_retry_sd_mount_in_one_bit(
+              runtime_storage_diagnostics.sd_bus_width, open_status, runtime_storage_diagnostics.sd_error)) {
+            const std::uint32_t four_bit_error{ runtime_storage_diagnostics.sd_error };
+            const std::uint32_t four_bit_blocks{ runtime_storage_diagnostics.sd_blocks };
+            runtime_storage_diagnostics.sd_fallback_error = four_bit_error;
+            runtime_storage_diagnostics.sd_fallback_used = 1U;
+            prepare_sd_mount_retry();
+            if (!initialize_sd_card(SDMMC_BUS_WIDE_1B, 1U)) {
+                if (runtime_storage_diagnostics.sd_blocks == 0U) {
+                    runtime_storage_diagnostics.sd_blocks = four_bit_blocks;
+                }
+                runtime_storage_diagnostics.sd_filex_status = open_status;
+                return false;
+            }
+            open_status = fx_media_open(&sd_media,
+                                        const_cast<CHAR*>("SD"),
+                                        direct_media_driver,
+                                        &sd_device,
+                                        sd_media_cache.data(),
+                                        sd_media_cache.size());
+        }
+#endif
         runtime_storage_diagnostics.sd_filex_status = open_status;
         sd_mounted = open_status == FX_SUCCESS;
         runtime_storage_diagnostics.sd_mounted = sd_mounted;

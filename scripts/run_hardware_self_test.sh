@@ -136,10 +136,12 @@ timeout --foreground --signal=TERM --kill-after=5s "${TEST_TIMEOUT_SECONDS}s" \
     -ex 'printf "FLASH_WAS_FORMATTED=%u\n", (unsigned int)runtime_storage_diagnostics.flash_was_formatted' \
     -ex 'printf "SD_BLOCKS=%u\n", (unsigned int)runtime_storage_diagnostics.sd_blocks' \
     -ex 'printf "SD_ERROR=0x%08x\n", (unsigned int)runtime_storage_diagnostics.sd_error' \
+    -ex 'printf "SD_FALLBACK_ERROR=0x%08x\n", (unsigned int)runtime_storage_diagnostics.sd_fallback_error' \
     -ex 'printf "SD_FILEX_STATUS=0x%08x\n", (unsigned int)runtime_storage_diagnostics.sd_filex_status' \
     -ex 'printf "SD_MOUNTED=%u\n", (unsigned int)runtime_storage_diagnostics.sd_mounted' \
     -ex 'printf "SD_DETECT_LEVEL=%u\n", (unsigned int)runtime_storage_diagnostics.sd_detect_level' \
     -ex 'printf "SD_BUS_WIDTH=%u\n", (unsigned int)runtime_storage_diagnostics.sd_bus_width' \
+    -ex 'printf "SD_FALLBACK_USED=%u\n", (unsigned int)runtime_storage_diagnostics.sd_fallback_used' \
     -ex 'monitor resume' \
     -ex 'detach' \
     >"${GDB_LOG}" 2>&1
@@ -171,10 +173,12 @@ printf '  Flash mounted:         %s\n' "$(result_value FLASH_MOUNTED)"
 printf '  Flash formatted now:   %s\n' "$(result_value FLASH_WAS_FORMATTED)"
 printf '  SD blocks:             %s\n' "$(result_value SD_BLOCKS)"
 printf '  SD error:              %s\n' "$(result_value SD_ERROR)"
+printf '  SD fallback error:     %s\n' "$(result_value SD_FALLBACK_ERROR)"
 printf '  SD FileX status:       %s\n' "$(result_value SD_FILEX_STATUS)"
 printf '  SD mounted:            %s\n' "$(result_value SD_MOUNTED)"
 printf '  SD detect level:       %s\n' "$(result_value SD_DETECT_LEVEL)"
 printf '  SD bus width:          %s bit\n' "$(result_value SD_BUS_WIDTH)"
+printf '  SD fallback used:      %s\n' "$(result_value SD_FALLBACK_USED)"
 
 if [[ "${status,,}" == "0x600d600d" ]]; then
     printf '\nPASS: all ten hardware self-test phases completed successfully.\n'

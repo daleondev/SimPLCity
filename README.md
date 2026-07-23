@@ -71,6 +71,12 @@ which is `D49` on **CN8 pin 14** of the NUCLEO-H753ZI; CN8 pin 8 is PC11/D46
 and is already used by SDMMC D3. Card detect is advisory, so a missing DET wire
 does not prevent mounting a readable card.
 
+SDMMC starts in 4-bit mode. If FileX's initial boot-sector read fails with a
+data CRC error, the runtime fully reinitializes the card and retries the mount
+once in 1-bit mode. Other FileX and HAL errors are not retried. Storage
+diagnostics report the final bus width, whether fallback was used, and the
+4-bit error that triggered it.
+
 `RUNTIME_STORAGE_ERASE_FLASH_ON_BOOT=ON` is a destructive recovery option for
 development only. Its default is `OFF`.
 

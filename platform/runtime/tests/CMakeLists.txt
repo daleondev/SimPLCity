@@ -28,6 +28,7 @@ target_sources(runtime_tests
         ${CMAKE_CURRENT_SOURCE_DIR}/libc_filex_test.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/libc_test.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/libstdcxx_test.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/storage_media_test.cpp
 )
 
 target_link_libraries(runtime_tests

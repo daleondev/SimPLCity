@@ -20,6 +20,7 @@ namespace runtime::storage
         std::uint32_t sd_blocks{};
         std::uint32_t qspi_error{};
         std::uint32_t sd_error{};
+        std::uint32_t sd_fallback_error{};
         std::uint32_t levelx_status{};
         std::uint32_t flash_filex_status{};
         std::uint32_t sd_filex_status{};
@@ -28,6 +29,7 @@ namespace runtime::storage
         std::uint8_t flash_was_formatted{};
         std::uint8_t sd_detect_level{};
         std::uint8_t sd_bus_width{};
+        std::uint8_t sd_fallback_used{};
     };
 
     [[nodiscard]] auto initialize() noexcept -> bool;
